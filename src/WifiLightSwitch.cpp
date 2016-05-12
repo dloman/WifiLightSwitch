@@ -5,10 +5,10 @@
 #define BUTTON_PIN 0
 #define LED_PIN 3
 
-HttpClient gHttpClient;
-
 bool gState = false;
-String gUrl = "http://workroom-lights.west.sbhackerspace.com/";
+bool gButtonToggled = false;
+HttpClient gHttpClient;
+Timer gProgramTimer;
 
 void sendData();
 void onDataSent(HttpClient& client, bool successful);
@@ -49,7 +49,7 @@ void onUdpReceive(
   uint16_t remotePort)
 {
   String Data(data);
-  if (remoteIP == IPAddress(10, 18, 0, 53))
+  if (remoteIP == IPAddress(10, 18, 0, 47))
   {
     if (Data == "1")
     {
@@ -90,40 +90,58 @@ void onStatusSent(HttpClient& client, bool successful)
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-void sendData()
-{
-	while(gHttpClient.isProcessing())
-  {
-    return;
-  }
-  digitalWrite(LED_PIN, !gState);
-	gHttpClient.downloadString(
-    gUrl + "toggle",
-    onDataSent);
-}
-
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
 void getStatus()
 {
 	while(gHttpClient.isProcessing())
   {
     return;
   }
-	gUdpConnection.listen(42068);
+	gUdpConnection.listen(42069); //42068 = workroom | 42069 classroom
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void IRAM_ATTR toggleFlag()
+{
+  gButtonToggled = true;
+  digitalWrite(LED_PIN, !gState);
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+void sendData()
+{
+  if (gButtonToggled)
+  {
+
+    while(gHttpClient.isProcessing())
+    {
+      return;
+    }
+
+    gHttpClient.downloadString(
+      "http://classroom-lights.west.sbhackerspace.com/toggle",
+      onDataSent);
+    gButtonToggled = false;
+  }
 }
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 void init()
 {
-	pinMode(LED_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
 
-	WifiStation.enable(true);
-	WifiStation.config(ssid, password);
   WifiAccessPoint.enable(false);
-	WifiStation.setIP(IPAddress(10, 18, 0, 101));
+  WifiStation.enable(true);
+  WifiStation.config(ssid, password);
+  WifiStation.setIP(
+    IPAddress(10, 18, 0, 99),
+    IPAddress(255, 255, 240, 0),
+    IPAddress(10, 18, 0, 1));
+  WifiStation.waitConnection(getStatus, 30, NULL);
 
-	WifiStation.waitConnection(getStatus, 30, NULL);
-	attachInterrupt(BUTTON_PIN, sendData, RISING);
+
+	attachInterrupt(BUTTON_PIN, toggleFlag, RISING);
+	gProgramTimer.initializeMs(10, sendData).start();
 }
