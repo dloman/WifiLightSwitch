@@ -7,6 +7,7 @@
 
 bool gState = false;
 bool gButtonToggled = false;
+long gLastTimeToggled = 0l;
 HttpClient gHttpClient;
 Timer gProgramTimer;
 
@@ -103,8 +104,12 @@ void getStatus()
 //-----------------------------------------------------------------------------
 void IRAM_ATTR toggleFlag()
 {
-  gButtonToggled = true;
-  digitalWrite(LED_PIN, !gState);
+  if (!gButtonToggled && millis() - gLastTimeToggled > 500)
+  {
+    gButtonToggled = true;
+    gLastTimeToggled = millis();
+    digitalWrite(LED_PIN, !gState);
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -128,6 +133,16 @@ void sendData()
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
+void test()
+{
+  if (gButtonToggled)
+  {
+    gButtonToggled = false;
+  }
+}
+
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void init()
 {
   pinMode(LED_PIN, OUTPUT);
@@ -143,5 +158,5 @@ void init()
 
 
 	attachInterrupt(BUTTON_PIN, toggleFlag, RISING);
-	gProgramTimer.initializeMs(10, sendData).start();
+	gProgramTimer.initializeMs(100, sendData).start();
 }
