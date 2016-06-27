@@ -5,6 +5,11 @@
 #define BUTTON_PIN 0
 #define LED_PIN 3
 
+const IPAddress gIpAddress(10, 18, 0, 66); //Classroom
+//const IPAddress gIpAddress(10, 18, 0, 67); //Workroom
+const unsigned gUdpPort = 42069; //42068 = workroom | 42069 classroom
+
+
 bool gState = false;
 bool gButtonToggled = false;
 long gLastTimeToggled = 0l;
@@ -97,7 +102,7 @@ void getStatus()
   {
     return;
   }
-	gUdpConnection.listen(42069); //42068 = workroom | 42069 classroom
+	gUdpConnection.listen(gUdpPort);
 }
 
 //-----------------------------------------------------------------------------
@@ -141,7 +146,7 @@ void init()
   WifiStation.enable(true);
   WifiStation.config(ssid, password);
   WifiStation.setIP(
-    IPAddress(10, 18, 0, 99),
+    gIpAddress,
     IPAddress(255, 255, 240, 0),
     IPAddress(10, 18, 0, 1));
   WifiStation.waitConnection(getStatus, 30, NULL);
